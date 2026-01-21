@@ -1,0 +1,25 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.flask.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.flask.name }} # Name of the Deployment to scale
+  minReplicas: {{ .Values.flask.autoscaling.minReplicas }} # Minimum number of replicas
+  maxReplicas: {{ .Values.flask.autoscaling.maxReplicas }} # Maximum number of replicas
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50 # Target average CPU utilization percentage
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70 # Target average memory utilization percentage

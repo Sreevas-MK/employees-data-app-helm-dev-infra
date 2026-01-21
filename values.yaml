@@ -1,0 +1,102 @@
+# values.yaml
+# Global configurations
+global:
+  namespace: flask-mysql-redis-app
+  storageclass: standard
+  host: k8s.sreevasmk.in
+  nodeSelector:
+    label: kubernetes.io/hostname
+
+# Flask App Configuration
+flask:
+  # Basic settings
+  name: flask-mysql-redis-app
+  replicas: 3
+  
+  # Image settings
+  image:
+    repository: sreevasmk1993/employee_data-flask-mysql-redis-app
+    tag: latest
+  
+  # Port
+  containerPort: 3000
+
+  # Health check paths
+  probes:
+    liveness:
+      path: /status           # Health check endpoint
+    readiness:
+      path: /status           # Same endpoint
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"
+  
+  # Autoscaling
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 5
+    cpuTarget: 50
+    memoryTarget: 70
+
+
+# Mysql Configuration
+mysql:
+  
+  # Node selector for MySQL
+  nodename: smk-cluster-worker
+  replicas: 1
+  
+  # Storage paths
+  storagepath: "/mnt/mysql-data"  # For persistent volume
+  backuppath: "/opt/mysql-backups" # For backup generation
+  storage: 1Gi
+  backup:
+    schedule: "0 2 * * *"
+
+  # Mysql Secrets
+  secrets:
+    root_password: bXlzcWxyb290MTIzKg==
+    mysql_password: bXlzcWwxMjMq
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"
+
+
+# Redis Configuration
+redis:
+  
+  # Node selector for MySQL
+  nodename: smk-cluster-worker2
+  replicas: 1
+  
+  # Storage paths
+  storagepath: "/mnt/redis-data"  # For persistent volume
+  storage: 1Gi
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"
+
+# Argocd
+argocd:
+  enabled: true  # Set to false if not using ArgoCD
+
+ingresscontrollername: traefik
+ingresscontrollernamespace: traefik

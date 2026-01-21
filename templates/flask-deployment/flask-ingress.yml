@@ -1,0 +1,36 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Values.flask.name }}-https
+  namespace: {{ .Values.flask.namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.global.host }}`) && PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: {{ .Values.flask.name }}-service
+          port: web
+  tls:
+    store:
+      name: default
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Values.flask.name }}-http
+  namespace: {{ .Values.flask.namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.global.host }}`) && PathPrefix(`/`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: {{ .Values.ingresscontrollernamespace }}
+      services:
+        - name: {{ .Values.flask.name }}-service
+          port: web

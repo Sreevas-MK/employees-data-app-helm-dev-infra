@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-configmap
+  namespace: {{ .Values.global.namespace }}
+data:
+  MYSQL_DATABASE: company
+  MYSQL_USER: appadmin

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  redis.conf: |
+    dir /data
+    appendonly yes
+    appendfilename "appendonly.aof"
+

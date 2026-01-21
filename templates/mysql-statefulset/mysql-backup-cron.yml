@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+  namespace: {{ .Values.global.namespace }}
+spec:
+  schedule: "{{ .Values.mysql.backup.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            {{ .Values.global.nodeSelector.label }}: {{ .Values.mysql.nodename }}
+          restartPolicy: OnFailure
+
+          securityContext:
+            fsGroup: 999
+
+          initContainers:
+          - name: fix-backup-dir-perms
+            image: busybox
+            command: ["sh", "-c", "chown -R 999:999 /backup && chmod 770 /backup"]
+            securityContext:  # ADD THIS
+              runAsUser: 0  # Needs root for chown
+              runAsNonRoot: false  # Explicit exception
+              allowPrivilegeEscalation: true
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+
+          containers:
+          - name: mysql-backup
+            image: mysql:latest
+
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 999         # non-root UID
+              runAsGroup: 999        # non-root GID
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+              seccompProfile: 
+                type: RuntimeDefault
+
+            envFrom:
+            - secretRef:
+                name: mysql-secret
+
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting backup...";
+              TIMESTAMP=$(date "+%Y-%m-%d-%H-%M");
+              mysqldump -h mysql-access -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE > /backup/backup-$TIMESTAMP.sql;
+              echo "Backup saved";
+
+              # delete backups older than 2 days
+              find /backup -type f -mtime +2 -delete;
+              # find /backup -type f -mmin +1 -delete;
+
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-privileges
+  namespace: {{ .Values.global.namespace }}
+data:
+  grant.sql: |
+
+    SET @@GLOBAL.local_infile = 0;
+    SET @@GLOBAL.skip_name_resolve = 1;
+
+    DROP USER IF EXISTS 'root'@'%';
+    DROP USER IF EXISTS ''@'localhost';
+    DROP USER IF EXISTS ''@'%';
+
+    CREATE DATABASE IF NOT EXISTS company;
+    GRANT ALL PRIVILEGES ON company.* TO 'appadmin'@'%';
+    ALTER USER 'appadmin'@'%' REQUIRE SSL;
+
+    DROP DATABASE IF EXISTS test;
+    DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+
+    FLUSH PRIVILEGES;
+    FLUSH HOSTS;
+

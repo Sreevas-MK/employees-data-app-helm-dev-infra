@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-statefulset
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql-service
+  replicas: {{ .Values.mysql.replicas }} # by default is 1
+  minReadySeconds: 10 # by default is 0
+  template:
+    metadata:
+      labels:
+        app: mysql
+
+    spec:
+      securityContext:
+        fsGroup: 999       # ensures PV is writable by non-root user
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:   # Strict rule
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ .Values.global.nodeSelector.label }}
+                operator: In
+                values:
+                - {{ .Values.mysql.nodename }}
+
+      terminationGracePeriodSeconds: 10
+
+      initContainers:
+       - name: init-mysql-data
+         image: busybox:latest
+         command: ["sh", "-c", "chown -R 999:999 /var/lib/mysql"]
+         securityContext:
+           runAsUser: 0 # Needs root to chown
+           runAsNonRoot: false  # Explicitly allow root for this specific task
+           seccompProfile:
+             type: RuntimeDefault
+         volumeMounts:
+         - name: mysql-data
+           mountPath: /var/lib/mysql
+
+      containers:
+      - name: mysql
+        image: mysql:latest
+        ports:
+        - containerPort: 3306
+          name: mysql
+
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999         # non-root MySQL user
+          runAsGroup: 999        # GID of mysql
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          seccompProfile:
+            type: RuntimeDefault
+
+        resources:
+          requests:
+            memory: {{ .Values.mysql.resources.requests.memory }}
+            cpu: {{ .Values.mysql.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.mysql.resources.limits.memory }}
+            cpu: {{ .Values.mysql.resources.limits.cpu }}
+
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: MYSQL_ROOT_PASSWORD
+          - name: MYSQL_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: MYSQL_DATABASE
+          - name: MYSQL_USER
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: MYSQL_USER
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: MYSQL_PASSWORD
+
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+
+        readinessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: initdb
+          mountPath: /docker-entrypoint-initdb.d
+     
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: initdb
+        configMap:
+          name: mysql-init-privileges

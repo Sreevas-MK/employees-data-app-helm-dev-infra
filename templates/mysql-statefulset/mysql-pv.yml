@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: {{ .Values.global.storageclass }}
+  capacity:
+    storage: {{ .Values.mysql.storage }}
+  persistentVolumeReclaimPolicy: Retain  # persistentVolumeReclaimPolicy: Retain, If you delete the PVC, data stays on host.
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.mysql.storagepath }}
+    type: DirectoryOrCreate
+
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: {{ .Values.global.nodeSelector.label }}
+          operator: In
+          values:
+          - {{ .Values.mysql.nodename }}
+

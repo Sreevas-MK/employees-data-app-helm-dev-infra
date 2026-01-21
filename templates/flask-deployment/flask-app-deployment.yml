@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.flask.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.flask.name }}
+spec:
+  replicas: {{ .Values.flask.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.flask.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.flask.name }}
+
+    spec:
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:latest
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for MySQL..."
+            until nc -z mysql-access 3306; do
+              echo "MySQL not ready yet, sleeping 5s"
+              sleep 5
+            done
+            echo "MySQL is up!"
+
+      containers:
+      - name: {{ .Values.flask.name }}
+        image: {{ .Values.flask.image.repository }}:{{ .Values.flask.image.tag }}
+        ports:
+        - containerPort: {{ .Values.flask.replicas }}
+
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.flask.probes.liveness.path }}
+            port: {{ .Values.flask.containerPort }}
+            scheme: HTTP
+          initialDelaySeconds: 30  # Give app time to start
+          periodSeconds: 10        # Check every 10 seconds
+          timeoutSeconds: 5        # Max 5 seconds per check
+          successThreshold: 1      # 1 success = healthy
+          failureThreshold: 3      # 3 failures = restart
+
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.flask.probes.readiness.path }}
+            port: {{ .Values.flask.containerPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5   # Start checking sooner
+          periodSeconds: 5         # Check every 5 seconds
+          timeoutSeconds: 3        # Faster timeout
+          successThreshold: 1
+          failureThreshold: 3
+
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+          seccompProfile:
+            type: RuntimeDefault
+
+        resources:
+          requests:
+            memory: {{ .Values.flask.resources.requests.memory }}
+            cpu: {{ .Values.flask.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.flask.resources.limits.memory }}
+            cpu: {{ .Values.flask.resources.limits.cpu }}
+
+        env:
+          # MySQL settings
+          - name: DATABASE_HOST
+            value: mysql-access  # Kubernetes Service for MySQL
+          - name: DATABASE_SSL
+            value: "true"
+          - name: DATABASE_PORT
+            value: "3306"
+          - name: DATABASE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: MYSQL_DATABASE
+          - name: DATABASE_USER
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: MYSQL_USER
+          - name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: MYSQL_PASSWORD
+
+          # Redis settings
+          - name: REDIS_HOST
+            value: redis        # Redis master Service
+          - name: REDIS_PORT
+            value: "6379"
+
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}

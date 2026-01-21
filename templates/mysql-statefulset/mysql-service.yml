@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  clusterIP: None # Headless service - DNS: mysql-statefulset-0.mysql-service.{{ .Values.global.namespace }}.svc.cluster.local
+  ports:
+    - port: 3306
+      name: mysql
+  selector:
+    app: mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-access
+  namespace: {{ .Values.global.namespace }}
+spec:
+  ports:         # Normal ClusterIP service kubectl exec + mysql client
+    - port: 3306
+      name: mysql
+  selector:
+    app: mysql
+
