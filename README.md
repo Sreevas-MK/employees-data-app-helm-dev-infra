@@ -9,7 +9,7 @@ It is designed to be deployed **on top of an existing Kubernetes cluster** that 
 This repository focuses **only on application-level manifests and configuration**, while cluster creation, ingress controller installation, monitoring, and GitOps tooling are handled externally.
 
 <p align="center">
-  <img src="./images/employees-data-app-dev.png" alt="employees-data-app-dev" width="1000">
+  <img src="./images/employees-data-app-dev.png" alt="employees-data-app-dev" width="750">
 </p>
 
 ---
