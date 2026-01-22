@@ -60,9 +60,9 @@ mysql:
     schedule: "0 2 * * *"
 
   # Mysql Secrets
-  secrets:
-    root_password: bXlzcWxyb290MTIzKg==
-    mysql_password: bXlzcWwxMjMq
+#   secrets:
+#     root_password: 
+#     mysql_password:
 
   # Resource limits
   resources:

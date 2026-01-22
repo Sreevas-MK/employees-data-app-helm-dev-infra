@@ -15,6 +15,8 @@ The application depends on:
 
 Startup ordering is handled using an **initContainer** that waits for MySQL to become available before the Flask application starts.
 
+---
+
 ## Flask Deployment
 
 The Flask application runs as a Kubernetes **Deployment**, allowing multiple replicas of the application to run simultaneously.
@@ -29,6 +31,8 @@ Each Flask pod:
 
 The container image is configurable through `values.yaml`, making it easy to update application versions without changing templates.
 
+---
+
 ## Application Startup Dependency Handling
 
 Before the Flask container starts, an **initContainer** named `wait-for-mysql` is executed.
@@ -36,6 +40,8 @@ This container continuously checks whether the MySQL service (`mysql-access:3306
 
 Only after MySQL is confirmed to be running does Kubernetes start the main Flask application container.
 This prevents application crashes due to database unavailability during startup.
+
+---
 
 ## Health Checks
 
@@ -46,6 +52,7 @@ The Flask application exposes a `/status` endpoint that is used for both **liven
 
 These probes improve reliability and smooth rolling updates.
 
+---
 
 ## Resource Management
 
@@ -58,6 +65,8 @@ Each Flask pod:
 
 These values are configurable via `values.yaml`.
 
+---
+
 ## Horizontal Pod Autoscaling (HPA)
 
 The Flask deployment is automatically scaled using a **Horizontal Pod Autoscaler**.
@@ -68,6 +77,8 @@ Scaling is based on:
 * Average memory utilization
 
 The number of replicas dynamically adjusts between the configured minimum and maximum values, ensuring better performance under load while conserving resources during low usage.
+
+---
 
 ## Environment Configuration
 
@@ -80,6 +91,7 @@ Environment variables include:
 
 Sensitive data such as database passwords are securely injected from Kubernetes Secrets.
 
+---
 
 ## Flask Service
 
@@ -93,6 +105,65 @@ The service is intended to be accessed through:
 
 It is not exposed directly to the external network.
 
+---
+
+## Ingress and Traffic Routing
+
+External access to the Flask application is handled using the **Traefik Ingress Controller** via custom `IngressRoute` resources.
+
+The application is exposed using **two ingress routes**:
+
+* An **HTTP ingress** that listens on port 80
+* An **HTTPS ingress** that listens on port 443
+
+### HTTPS Ingress
+
+The HTTPS ingress route handles all secure traffic to the application.
+
+Key characteristics:
+
+* Uses the `websecure` entry point
+* Matches requests based on the configured host and path prefix
+* Forwards traffic to the Flask `ClusterIP` service
+* TLS is enabled using the default Traefik TLS store
+
+This ensures encrypted communication between clients and the application.
+
+### HTTP to HTTPS Redirection
+
+The HTTP ingress route exists only to redirect traffic to HTTPS.
+
+Key characteristics:
+
+* Uses the `web` entry point
+* Applies a middleware that performs HTTP → HTTPS redirection
+* Ensures all client traffic is served securely
+
+This prevents insecure access and enforces HTTPS by default.
+
+### Traffic Flow
+
+The end-to-end request flow is as follows:
+
+```
+Client
+ → DNS (Route53 / configured host)
+ → External Load Balancer (provisioned for Traefik)
+ → Traefik Ingress Controller (pod)
+ → IngressRoute (HTTP → HTTPS redirect)
+ → IngressRoute (HTTPS)
+ → Flask ClusterIP Service
+ → Flask Pod
+```
+
+### Design Considerations
+
+* The Flask service is not exposed directly to the internet
+* Only the Ingress Controller is externally reachable
+* TLS termination is handled at the ingress layer
+* Routing logic is declarative and version-controlled via Helm templates
+
+---
 
 ## Configuration via values.yaml
 
@@ -105,6 +176,8 @@ All important parameters are configurable through `values.yaml`, including:
 * Namespace
 
 This separation allows the same templates to be reused across environments with minimal changes.
+
+---
 
 ## Intended Usage
 
