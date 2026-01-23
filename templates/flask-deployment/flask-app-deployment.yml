@@ -34,7 +34,7 @@ spec:
       - name: {{ .Values.flask.name }}
         image: {{ .Values.flask.image.repository }}:{{ .Values.flask.image.tag }}
         ports:
-        - containerPort: {{ .Values.flask.replicas }}
+        - containerPort: {{ .Values.flask.containerPort }}
 
         livenessProbe:
           httpGet:
