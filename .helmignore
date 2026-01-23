@@ -21,3 +21,8 @@
 .idea/
 *.tmproj
 .vscode/
+
+*.md
+README.md
+*.png
+*.jpeg
