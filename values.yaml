@@ -15,7 +15,7 @@ flask:
   
   # Image settings
   image:
-    repository: sreevasmk1993/employee_data-flask-mysql-redis-app
+    repository: sreevasmk1993/employees-data-app
     tag: latest
   
   # Port
