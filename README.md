@@ -27,6 +27,11 @@ This project represents a **realistic development-grade Kubernetes application**
 
 It is intentionally kept **simple, explicit, and readable** to support learning and experimentation.
 
+## Application Source Code Repository
+
+The Flask application deployed by this Helm chart is maintained in a separate source repository:
+https://github.com/Sreevas-MK/employees-data-app.git
+
 ---
 ## Repository Structure
 

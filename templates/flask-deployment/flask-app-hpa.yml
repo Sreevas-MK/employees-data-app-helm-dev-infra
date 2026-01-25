@@ -16,10 +16,10 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50 # Target average CPU utilization percentage
+          averageUtilization: {{ .Values.flask.autoscaling.cpuTarget }} # Target average CPU utilization percentage
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: 70 # Target average memory utilization percentage
+          averageUtilization: {{ .Values.flask.autoscaling.memoryTarget }} # Target average memory utilization percentage
